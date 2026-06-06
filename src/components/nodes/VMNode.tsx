@@ -1,12 +1,12 @@
 import { Handle, NodeProps, Position, Node, useReactFlow } from '@xyflow/react'
-import { Shield, Server, Globe, Monitor } from 'lucide-react'
+import { Shield, Server, Globe, Monitor, type LucideIcon } from 'lucide-react'
 import { VMNodeData, VMRole } from '../../types/nodes'
 
 type VMNodeType = Node<VMNodeData, 'vm'>
 
 const ROLE_CONFIG: Record<
   VMRole,
-  { headerBg: string; border: string; selectedBorder: string; Icon: React.FC<{ size: number; className?: string }>; label: string }
+  { headerBg: string; border: string; selectedBorder: string; Icon: LucideIcon; label: string }
 > = {
   'domain-controller': {
     headerBg: '#1d4ed8',

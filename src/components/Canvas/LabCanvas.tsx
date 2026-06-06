@@ -10,6 +10,7 @@ import {
   EdgeTypes,
   Node,
   Connection,
+  Edge,
 } from '@xyflow/react'
 import useLabStore from '../../store/useLabStore'
 import { VMNode } from '../nodes/VMNode'
@@ -40,7 +41,7 @@ const VALID_CONNECTIONS: Record<string, string[]> = {
   nsg:    ['subnet'],
 }
 
-function isValidConnection(connection: Connection, nodes: Node[]): boolean {
+function isValidConnection(connection: Connection | Edge, nodes: Node[]): boolean {
   const src = nodes.find((n) => n.id === connection.source)
   const tgt = nodes.find((n) => n.id === connection.target)
   if (!src || !tgt || src.id === tgt.id) return false
