@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react'
-import { Cpu, Download, Trash2, Copy, Check, X, Terminal, ExternalLink, Save, Upload, ShieldCheck } from 'lucide-react'
+import { Cpu, Download, Trash2, Copy, Check, X, Terminal, ExternalLink, Save, Upload, ShieldCheck, Menu, Settings } from 'lucide-react'
 import useLabStore from '../../store/useLabStore'
 import { generateBicep } from '../../engine/bicepGenerator'
-import { validateNetwork, ValidationResult } from '../../engine/networkValidator'
+import { validateNetwork, validateDeploymentReadiness, ValidationResult, ValidationIssue } from '../../engine/networkValidator'
 
 function NetworkValidationModal({ result, onClose }: { result: ValidationResult; onClose: () => void }) {
   const allOk = result.errorCount === 0 && result.warningCount === 0
@@ -364,7 +364,15 @@ az deployment group create \\
   )
 }
 
-export function Toolbar() {
+export function Toolbar({
+  isMobile = false,
+  onTogglePalette,
+  onToggleProperties,
+}: {
+  isMobile?: boolean
+  onTogglePalette?: () => void
+  onToggleProperties?: () => void
+}) {
   const { nodes, edges, clearLab, importLab } = useLabStore()
   const [showBicep, setShowBicep] = useState(false)
   const [bicepContent, setBicepContent] = useState('')
@@ -373,7 +381,14 @@ export function Toolbar() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleValidateNetwork = () => {
-    setValidationResult(validateNetwork(nodes, edges))
+    const netResult = validateNetwork(nodes, edges)
+    const deployIssues: ValidationIssue[] = validateDeploymentReadiness(nodes)
+    const allIssues = [...netResult.issues.filter(i => i.severity !== 'ok'), ...deployIssues.filter(i => i.severity !== 'ok')]
+    setValidationResult({
+      issues: allIssues.length === 0 ? [{ severity: 'ok', message: 'All network and deployment checks passed ✓' }] : allIssues,
+      errorCount: allIssues.filter(i => i.severity === 'error').length,
+      warningCount: allIssues.filter(i => i.severity === 'warning').length,
+    })
   }
 
   const handleExport = () => {
@@ -427,6 +442,14 @@ export function Toolbar() {
     e.target.value = ''
   }
 
+  // Shared style helpers
+  const iconBtn = (accent = '#4f46e5'): React.CSSProperties => ({
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    gap: 6, padding: isMobile ? '6px 10px' : '5px 12px',
+    background: 'transparent', border: '1px solid #2d3148', borderRadius: 7,
+    color: '#64748b', cursor: 'pointer', fontSize: 12, fontWeight: 500,
+  })
+
   return (
     <>
       {/* Hidden file input for loading diagrams */}
@@ -445,237 +468,126 @@ export function Toolbar() {
           borderBottom: '1px solid #1e2130',
           display: 'flex',
           alignItems: 'center',
-          padding: '0 16px',
-          gap: 12,
+          padding: isMobile ? '0 10px' : '0 16px',
+          gap: isMobile ? 6 : 12,
           flexShrink: 0,
         }}
       >
+        {/* Mobile: palette toggle */}
+        {isMobile && (
+          <button
+            onClick={onTogglePalette}
+            style={{ ...iconBtn(), padding: '6px 8px', border: 'none' }}
+            title="Toggle component palette"
+          >
+            <Menu size={18} color="#94a3b8" />
+          </button>
+        )}
+
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginRight: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <div
             style={{
-              width: 28,
-              height: 28,
+              width: 28, height: 28,
               background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-              borderRadius: 7,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}
           >
             <Cpu size={15} color="#fff" />
           </div>
-          <span style={{ color: '#e2e8f0', fontWeight: 700, fontSize: 15, letterSpacing: '-0.02em' }}>
-            Lab Designer
-          </span>
-          <span
-            style={{
-              fontSize: 10,
-              color: '#4f46e5',
-              background: '#1e1b4b',
-              padding: '1px 7px',
-              borderRadius: 10,
-              fontWeight: 600,
-              letterSpacing: '0.04em',
-            }}
-          >
-            PREVIEW
-          </span>
+          {!isMobile && (
+            <>
+              <span style={{ color: '#e2e8f0', fontWeight: 700, fontSize: 15, letterSpacing: '-0.02em' }}>
+                Lab Designer
+              </span>
+              <span style={{ fontSize: 10, color: '#4f46e5', background: '#1e1b4b', padding: '1px 7px', borderRadius: 10, fontWeight: 600, letterSpacing: '0.04em' }}>
+                PREVIEW
+              </span>
+            </>
+          )}
         </div>
 
-        <div style={{ width: 1, height: 24, background: '#1e2130' }} />
+        {!isMobile && <div style={{ width: 1, height: 24, background: '#1e2130' }} />}
 
-        {/* Stats */}
-        <div style={{ color: '#475569', fontSize: 12 }}>
-          {nodes.filter((n) => n.type === 'vm').length} VMs ·{' '}
-          {nodes.filter((n) => n.type === 'vnet').length} VNets ·{' '}
-          {nodes.filter((n) => n.type === 'subnet').length} Subnets
-        </div>
+        {/* Stats — hidden on mobile to save space */}
+        {!isMobile && (
+          <div style={{ color: '#475569', fontSize: 12 }}>
+            {nodes.filter((n) => n.type === 'vm').length} VMs ·{' '}
+            {nodes.filter((n) => n.type === 'vnet').length} VNets ·{' '}
+            {nodes.filter((n) => n.type === 'subnet').length} Subnets
+          </div>
+        )}
 
-        {/* Spacer */}
         <div style={{ flex: 1 }} />
 
-        {/* Actions */}
-        <button
-          onClick={handleValidateNetwork}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '5px 12px',
-            background: 'transparent',
-            border: '1px solid #2d3148',
-            borderRadius: 7,
-            color: '#64748b',
-            cursor: 'pointer',
-            fontSize: 12,
-            fontWeight: 500,
-          }}
-          onMouseEnter={(e) => {
-            const b = e.currentTarget as HTMLButtonElement
-            b.style.borderColor = '#22c55e'
-            b.style.color = '#4ade80'
-          }}
-          onMouseLeave={(e) => {
-            const b = e.currentTarget as HTMLButtonElement
-            b.style.borderColor = '#2d3148'
-            b.style.color = '#64748b'
-          }}
-          title="Validate network configuration"
+        {/* Actions — icon-only on mobile, icon+label on desktop */}
+        <button onClick={handleValidateNetwork} style={iconBtn()} title="Validate network"
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#4ade80'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#22c55e' }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#64748b'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#2d3148' }}
         >
           <ShieldCheck size={13} />
-          Validate Network
+          {!isMobile && 'Validate Network'}
         </button>
 
-        <div style={{ width: 1, height: 24, background: '#1e2130' }} />
+        {!isMobile && <div style={{ width: 1, height: 24, background: '#1e2130' }} />}
 
-        <button
-          onClick={handleLoadDiagram}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '5px 12px',
-            background: 'transparent',
-            border: '1px solid #2d3148',
-            borderRadius: 7,
-            color: '#64748b',
-            cursor: 'pointer',
-            fontSize: 12,
-            fontWeight: 500,
-          }}
-          onMouseEnter={(e) => {
-            const b = e.currentTarget as HTMLButtonElement
-            b.style.borderColor = '#4f46e5'
-            b.style.color = '#818cf8'
-          }}
-          onMouseLeave={(e) => {
-            const b = e.currentTarget as HTMLButtonElement
-            b.style.borderColor = '#2d3148'
-            b.style.color = '#64748b'
-          }}
-          title="Load a saved diagram from a .json file"
+        <button onClick={handleLoadDiagram} style={iconBtn()} title="Load diagram"
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#818cf8'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#4f46e5' }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#64748b'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#2d3148' }}
         >
           <Upload size={13} />
-          Load Diagram
+          {!isMobile && 'Load Diagram'}
         </button>
 
-        <button
-          onClick={handleSaveDiagram}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '5px 12px',
-            background: 'transparent',
-            border: '1px solid #2d3148',
-            borderRadius: 7,
-            color: '#64748b',
-            cursor: 'pointer',
-            fontSize: 12,
-            fontWeight: 500,
-          }}
-          onMouseEnter={(e) => {
-            const b = e.currentTarget as HTMLButtonElement
-            b.style.borderColor = '#4f46e5'
-            b.style.color = '#818cf8'
-          }}
-          onMouseLeave={(e) => {
-            const b = e.currentTarget as HTMLButtonElement
-            b.style.borderColor = '#2d3148'
-            b.style.color = '#64748b'
-          }}
-          title="Save diagram to a .json file"
+        <button onClick={handleSaveDiagram} style={iconBtn()} title="Save diagram"
+          onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#818cf8'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#4f46e5' }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#64748b'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#2d3148' }}
         >
           <Save size={13} />
-          Save Diagram
+          {!isMobile && 'Save Diagram'}
         </button>
 
-        <div style={{ width: 1, height: 24, background: '#1e2130' }} />
-
-        <button
-          onClick={handleClear}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '5px 12px',
-            background: 'transparent',
-            border: '1px solid #2d3148',
-            borderRadius: 7,
-            color: '#64748b',
-            cursor: 'pointer',
-            fontSize: 12,
-            fontWeight: 500,
-          }}
-          onMouseEnter={(e) => {
-            const b = e.currentTarget as HTMLButtonElement
-            b.style.borderColor = '#ef4444'
-            b.style.color = '#ef4444'
-          }}
-          onMouseLeave={(e) => {
-            const b = e.currentTarget as HTMLButtonElement
-            b.style.borderColor = '#2d3148'
-            b.style.color = '#64748b'
-          }}
-        >
-          <Trash2 size={13} />
-          Clear
-        </button>
+        {!isMobile && (
+          <>
+            <div style={{ width: 1, height: 24, background: '#1e2130' }} />
+            <button onClick={handleClear} style={iconBtn()} title="Clear canvas"
+              onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#ef4444'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#ef4444' }}
+              onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = '#64748b'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#2d3148' }}
+            >
+              <Trash2 size={13} />
+              Clear
+            </button>
+          </>
+        )}
 
         <button
           onClick={handleExport}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 7,
-            padding: '6px 16px',
-            background: 'linear-gradient(135deg, #4f46e5, #6d28d9)',
-            border: 'none',
-            borderRadius: 7,
-            color: '#fff',
-            cursor: 'pointer',
-            fontSize: 13,
-            fontWeight: 600,
-            boxShadow: '0 2px 8px rgba(79,70,229,0.35)',
-          }}
-          onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 16px rgba(79,70,229,0.5)')
-          }
-          onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLButtonElement).style.boxShadow = '0 2px 8px rgba(79,70,229,0.35)')
-          }
+          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: isMobile ? '6px 10px' : '6px 16px', background: 'linear-gradient(135deg, #4f46e5, #6d28d9)', border: 'none', borderRadius: 7, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600, boxShadow: '0 2px 8px rgba(79,70,229,0.35)' }}
+          title="Export Bicep"
         >
           <Download size={14} />
-          Export Bicep
+          {!isMobile && 'Export Bicep'}
         </button>
 
         <button
           onClick={handleDeploy}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 7,
-            padding: '6px 16px',
-            background: '#0078d4',
-            border: 'none',
-            borderRadius: 7,
-            color: '#fff',
-            cursor: 'pointer',
-            fontSize: 13,
-            fontWeight: 600,
-            boxShadow: '0 2px 8px rgba(0,120,212,0.35)',
-          }}
-          onMouseEnter={(e) =>
-            ((e.currentTarget as HTMLButtonElement).style.background = '#106ebe')
-          }
-          onMouseLeave={(e) =>
-            ((e.currentTarget as HTMLButtonElement).style.background = '#0078d4')
-          }
+          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: isMobile ? '6px 10px' : '6px 16px', background: '#0078d4', border: 'none', borderRadius: 7, color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600, boxShadow: '0 2px 8px rgba(0,120,212,0.35)' }}
+          title="Deploy to Azure"
         >
           <Terminal size={14} />
-          Deploy to Azure
+          {!isMobile && 'Deploy to Azure'}
         </button>
+
+        {/* Mobile: properties panel toggle */}
+        {isMobile && (
+          <button
+            onClick={onToggleProperties}
+            style={{ ...iconBtn(), padding: '6px 8px', border: 'none' }}
+            title="Toggle properties"
+          >
+            <Settings size={18} color="#94a3b8" />
+          </button>
+        )}
       </div>
 
       {showBicep && (

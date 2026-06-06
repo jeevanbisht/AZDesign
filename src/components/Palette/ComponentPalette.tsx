@@ -1,4 +1,6 @@
+import useLabStore from '../../store/useLabStore'
 import { Network, Layers, ShieldAlert, Shield, Server, Globe, Monitor, LucideIcon } from 'lucide-react'
+import { createDefaultNodeData } from '../../types/nodes'
 
 interface PaletteItemDef {
   nodeType: string
@@ -29,8 +31,9 @@ const SECTIONS: { title: string; items: PaletteItemDef[] }[] = [
   },
 ]
 
-function PaletteItem({ item }: { item: PaletteItemDef }) {
+function PaletteItem({ item, onTap }: { item: PaletteItemDef; onTap?: () => void }) {
   const { Icon } = item
+  const { addNode } = useLabStore()
 
   const onDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('application/reactflow-type', item.nodeType)
@@ -38,10 +41,19 @@ function PaletteItem({ item }: { item: PaletteItemDef }) {
     e.dataTransfer.effectAllowed = 'move'
   }
 
+  // On mobile, tapping a palette item adds the node at the centre of the canvas
+  const handleTap = () => {
+    const id = `${item.nodeType}-${Date.now()}`
+    const data = createDefaultNodeData(item.nodeType, item.role, id)
+    addNode({ id, type: item.nodeType, position: { x: 300, y: 200 }, data })
+    onTap?.()
+  }
+
   return (
     <div
       draggable
       onDragStart={onDragStart}
+      onClick={handleTap}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -78,11 +90,12 @@ function PaletteItem({ item }: { item: PaletteItemDef }) {
   )
 }
 
-export function ComponentPalette() {
+export function ComponentPalette({ onItemTap }: { onItemTap?: () => void } = {}) {
   return (
     <div
       style={{
         width: 240,
+        height: '100%',
         flexShrink: 0,
         background: '#12151e',
         borderRight: '1px solid #1e2130',
@@ -92,12 +105,7 @@ export function ComponentPalette() {
       }}
     >
       {/* Title */}
-      <div
-        style={{
-          padding: '14px 14px 10px',
-          borderBottom: '1px solid #1e2130',
-        }}
-      >
+      <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid #1e2130' }}>
         <div style={{ color: '#64748b', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
           Components
         </div>
@@ -109,20 +117,11 @@ export function ComponentPalette() {
       {/* Sections */}
       {SECTIONS.map((section) => (
         <div key={section.title} style={{ padding: '10px 4px' }}>
-          <div
-            style={{
-              color: '#475569',
-              fontSize: 10,
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              padding: '0 10px 6px',
-            }}
-          >
+          <div style={{ color: '#475569', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0 10px 6px' }}>
             {section.title}
           </div>
           {section.items.map((item) => (
-            <PaletteItem key={`${item.nodeType}-${item.role}`} item={item} />
+            <PaletteItem key={`${item.nodeType}-${item.role}`} item={item} onTap={onItemTap} />
           ))}
         </div>
       ))}
