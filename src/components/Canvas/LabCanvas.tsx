@@ -78,13 +78,14 @@ export function LabCanvas() {
       const id = `${nodeType}-${Date.now()}`
 
       const style: React.CSSProperties = {}
+      // Offset by half the node width so the drop lands centered on the cursor
       if (nodeType === 'vnet') {
         style.width = 900; style.height = 56
         position.x = position.x - 450
       }
       if (nodeType === 'subnet') {
-        style.width = 860; style.height = 44
-        position.x = position.x - 430
+        style.width = 450; style.height = 44
+        position.x = position.x - 225
       }
 
       const newNode: Node = {
@@ -138,7 +139,6 @@ export function LabCanvas() {
         />
       </ReactFlow>
 
-      {/* Drop hint when canvas is empty */}
       {nodes.length === 0 && (
         <div
           style={{

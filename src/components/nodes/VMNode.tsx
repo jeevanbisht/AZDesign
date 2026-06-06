@@ -56,7 +56,6 @@ export function VMNode({ id, data, selected }: NodeProps<VMNodeType>) {
         background: '#1a1d27',
       }}
     >
-      {/* Header */}
       <div
         style={{
           background: cfg.headerBg,
@@ -101,7 +100,6 @@ export function VMNode({ id, data, selected }: NodeProps<VMNodeType>) {
         )}
       </div>
 
-      {/* Body */}
       <div style={{ padding: '8px 10px', fontSize: 11, lineHeight: '1.6' }}>
         <div style={{ color: '#94a3b8' }}>{cfg.label}</div>
         <div style={{ color: '#64748b', fontFamily: 'monospace' }}>{data.vmSize}</div>
@@ -114,6 +112,11 @@ export function VMNode({ id, data, selected }: NodeProps<VMNodeType>) {
         {data.role === 'web-server' && data.webStack && (
           <div style={{ color: '#fb923c', marginTop: 2, textTransform: 'uppercase' }}>
             {data.webStack}
+          </div>
+        )}
+        {data.privateIp && (
+          <div style={{ color: '#a78bfa', marginTop: 2, fontFamily: 'monospace' }}>
+            📡 {data.privateIp}
           </div>
         )}
       </div>

@@ -11,10 +11,8 @@ import {
 } from '@xyflow/react'
 import { VMNodeData, SubnetNodeData, VNetNodeData } from '../types/nodes'
 
-// ── Sample lab pre-loaded on startup ────────────────────────────────────────
-
 const INITIAL_NODES: Node[] = [
-  // ── Infrastructure bars (rendered first = behind VMs) ──────────────────────
+  // Infrastructure bars rendered first so VMs appear above them (React Flow renders in array order)
   {
     id: 'vnet-1',
     type: 'vnet',
@@ -36,10 +34,9 @@ const INITIAL_NODES: Node[] = [
       subnetName: 'subnet-default',
       addressPrefix: '10.0.1.0/24',
     } satisfies SubnetNodeData,
-    style: { width: 820, height: 44 },
+    style: { width: 410, height: 44 },
   },
 
-  // ── VM cards (rendered above bars) ────────────────────────────────────────
   {
     id: 'vm-dc-1',
     type: 'vm',
@@ -75,31 +72,28 @@ const INITIAL_NODES: Node[] = [
 ]
 
 const INITIAL_EDGES: Edge[] = [
-  // Rack membership connections (VM → subnet → vnet, straight vertical lines)
   {
     id: 'e-dc-subnet',
     source: 'vm-dc-1',
     target: 'subnet-1',
-    type: 'straight',
-    style: { stroke: '#5b21b6', strokeWidth: 1.5, strokeDasharray: '4,3', opacity: 0.6 },
+    type: 'smoothstep',
+    style: { stroke: '#6366f1', strokeWidth: 1.5 },
   },
   {
     id: 'e-member-subnet',
     source: 'vm-member-1',
     target: 'subnet-1',
-    type: 'straight',
-    style: { stroke: '#5b21b6', strokeWidth: 1.5, strokeDasharray: '4,3', opacity: 0.6 },
+    type: 'smoothstep',
+    style: { stroke: '#6366f1', strokeWidth: 1.5 },
   },
   {
     id: 'e-subnet-vnet',
     source: 'subnet-1',
     target: 'vnet-1',
-    type: 'straight',
-    style: { stroke: '#1d4ed8', strokeWidth: 2, strokeDasharray: '6,4', opacity: 0.5 },
+    type: 'smoothstep',
+    style: { stroke: '#6366f1', strokeWidth: 1.5 },
   },
 ]
-
-// ── Store definition ─────────────────────────────────────────────────────────
 
 interface LabState {
   nodes: Node[]

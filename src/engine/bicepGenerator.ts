@@ -48,8 +48,6 @@ function getOsImageRef(osVersion: string) {
   }
 }
 
-// ── Main export ──────────────────────────────────────────────────────────────
-
 export function generateBicep(nodes: Node[], edges: Edge[]): string {
   const vnetNodes = nodes.filter((n) => n.type === 'vnet')
   const subnetNodes = nodes.filter((n) => n.type === 'subnet')
@@ -153,9 +151,12 @@ ${subnetsSection}  }
   const dcNode = vmNodes.find((v) => (v.data as VMNodeData).role === 'domain-controller')
   const dcData = dcNode ? (dcNode.data as VMNodeData) : null
   const dcSubnetNode = dcNode ? subnetNodes.find((s) => s.id === vmToSubnet.get(dcNode.id)) : null
-  const dcStaticIP = dcSubnetNode
-    ? getSubnetFirstHostIP((dcSubnetNode.data as SubnetNodeData).addressPrefix)
-    : '10.0.1.4'
+
+  // Prefer the user-configured static IP; fall back to subnet's first usable host
+  const dcStaticIP = dcData?.privateIp
+    ?? (dcSubnetNode
+        ? getSubnetFirstHostIP((dcSubnetNode.data as SubnetNodeData).addressPrefix)
+        : '10.0.1.4')
 
   for (const vm of vmNodes) {
     const d = vm.data as VMNodeData
@@ -179,8 +180,9 @@ ${subnetsSection}  }
       : ''
     const privateIPMethod = isDC ? 'Static' : 'Dynamic'
     const privateIPLine = isDC ? `\n          privateIPAddress: '${dcStaticIP}'` : ''
+    // Member server NIC must wait for AD DS to be ready, not just the DC NIC
     const nicDependsOn = isMember && dcData
-      ? `\n  dependsOn: [nic_${sanitize(dcData.vmName)}]`
+      ? `\n  dependsOn: [ext_${sanitize(dcData.vmName)}_WaitForAD]`
       : ''
 
     parts.push(`// ── ${d.label} (${d.role}) ${'─'.repeat(Math.max(0, 42 - d.label.length - d.role.length))}
@@ -281,13 +283,32 @@ resource ext_${sanitize(d.vmName)}_DSC 'Microsoft.Compute/virtualMachines/extens
     }
   }
 }
+
+// Wait for AD DS to be fully initialised after the mandatory post-promotion reboot
+// before any member server attempts to join. The DSC extension reports success when
+// the script finishes, but AD services need extra time to start after reboot.
+resource ext_${sanitize(d.vmName)}_WaitForAD 'Microsoft.Compute/virtualMachines/extensions@2023-03-01' = {
+  parent: vm_${sanitize(d.vmName)}
+  name: 'WaitForAD'
+  location: location
+  dependsOn: [ext_${sanitize(d.vmName)}_DSC]
+  properties: {
+    publisher: 'Microsoft.Compute'
+    type: 'CustomScriptExtension'
+    typeHandlerVersion: '1.10'
+    autoUpgradeMinorVersion: true
+    settings: {
+      commandToExecute: 'powershell -Command "do { Start-Sleep 15 } until (Get-Service ADWS -ErrorAction SilentlyContinue | Where-Object Status -eq Running)"'
+    }
+  }
+}
 `)
     }
 
     if (d.role === 'member-server') {
       const domain = dcData?.domainName ?? d.domainToJoin ?? 'lab.local'
       const dep = dcData
-        ? `\n  dependsOn: [ext_${sanitize(dcData.vmName)}_DSC]`
+        ? `\n  dependsOn: [ext_${sanitize(dcData.vmName)}_WaitForAD]`
         : ''
       parts.push(`// Domain Join Extension for ${d.vmName}
 resource ext_${sanitize(d.vmName)}_DomainJoin 'Microsoft.Compute/virtualMachines/extensions@2023-03-01' = {

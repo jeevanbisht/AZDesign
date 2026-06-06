@@ -1,5 +1,3 @@
-// ── Node data types ─────────────────────────────────────────────────────────
-
 export type VMRole = 'domain-controller' | 'member-server' | 'web-server' | 'generic'
 export type WebStack = 'iis' | 'nginx' | 'apache'
 export type OSVersion =
@@ -22,6 +20,8 @@ export interface VMNodeData extends Record<string, unknown> {
   osVersion: OSVersion
   adminUsername: string
   adminPassword: string
+  privateIp?: string
+  ipAllocation?: 'Dynamic' | 'Static'
   // Domain Controller
   domainName?: string
   netBIOSName?: string
@@ -51,8 +51,6 @@ export interface NSGNodeData extends Record<string, unknown> {
 }
 
 export type LabNodeData = VMNodeData | VNetNodeData | SubnetNodeData | NSGNodeData
-
-// ── Default data factories ───────────────────────────────────────────────────
 
 export function createDefaultNodeData(
   nodeType: string,

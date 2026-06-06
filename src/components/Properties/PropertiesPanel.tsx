@@ -1,5 +1,6 @@
 import React from 'react'
 import { X } from 'lucide-react'
+import { Edge, Node } from '@xyflow/react'
 import useLabStore from '../../store/useLabStore'
 import {
   VMNodeData,
@@ -11,6 +12,59 @@ import {
   OSVersion,
   WebStack,
 } from '../../types/nodes'
+
+function lastOctet(ip: string): number | null {
+  const parts = ip.split('.')
+  if (parts.length !== 4) return null
+  const n = parseInt(parts[3], 10)
+  return isNaN(n) ? null : n
+}
+
+/** Given a CIDR prefix and a set of already-used last octets,
+ *  return the next available private IP (Azure reserves .0–.3, start at .4). */
+function nextAvailableIp(addressPrefix: string, usedOctets: Set<number>): string {
+  const base = addressPrefix.split('/')[0].split('.')
+  let octet = 4
+  while (usedOctets.has(octet) && octet < 254) octet++
+  return `${base[0]}.${base[1]}.${base[2]}.${octet}`
+}
+
+/** Find the subnet connected to a VM and suggest the next available IP,
+ *  skipping IPs already assigned to sibling VMs on the same subnet. */
+function getSuggestedIp(
+  vmId: string,
+  nodes: Node[],
+  edges: Edge[],
+): string | null {
+  const subnetEdge = edges.find(
+    (e) => (e.source === vmId || e.target === vmId) &&
+      nodes.find((n) => n.id === (e.source === vmId ? e.target : e.source) && n.type === 'subnet'),
+  )
+  if (!subnetEdge) return null
+
+  const subnetId = subnetEdge.source === vmId ? subnetEdge.target : subnetEdge.source
+  const subnetNode = nodes.find((n) => n.id === subnetId && n.type === 'subnet')
+  if (!subnetNode) return null
+
+  const addressPrefix = (subnetNode.data as SubnetNodeData).addressPrefix
+
+  // Collect last octets already assigned to sibling VMs (excluding this VM)
+  const usedOctets = new Set<number>()
+  edges
+    .filter((e) => e.source === subnetId || e.target === subnetId)
+    .map((e) => (e.source === subnetId ? e.target : e.source))
+    .filter((id) => id !== vmId && nodes.find((n) => n.id === id && n.type === 'vm'))
+    .forEach((id) => {
+      const siblingData = nodes.find((n) => n.id === id)?.data as VMNodeData | undefined
+      const ip = siblingData?.privateIp
+      if (ip) {
+        const oct = lastOctet(ip)
+        if (oct !== null) usedOctets.add(oct)
+      }
+    })
+
+  return nextAvailableIp(addressPrefix, usedOctets)
+}
 
 // ── Shared form primitives ────────────────────────────────────────────────────
 
@@ -139,7 +193,15 @@ const LOCATION_OPTIONS = [
   'japaneast', 'canadacentral',
 ].map((v) => ({ value: v, label: v }))
 
-function VMForm({ data, update }: { data: VMNodeData; update: (p: Partial<VMNodeData>) => void }) {
+function VMForm({
+  data,
+  update,
+  suggestedIp,
+}: {
+  data: VMNodeData
+  update: (p: Partial<VMNodeData>) => void
+  suggestedIp?: string
+}) {
   return (
     <div>
       <SectionHeading title="Identity" />
@@ -151,6 +213,90 @@ function VMForm({ data, update }: { data: VMNodeData; update: (p: Partial<VMNode
       </Field>
       <Field label="Role">
         <Select<VMRole> value={data.role} onChange={(v) => update({ role: v })} options={ROLE_OPTIONS} />
+      </Field>
+
+      <SectionHeading title="Networking" />
+      {data.role !== 'domain-controller' && (
+        <Field label="IP Allocation">
+          <div style={{ display: 'flex', gap: 6 }}>
+            {(['Dynamic', 'Static'] as const).map((mode) => {
+              const active = (data.ipAllocation ?? 'Dynamic') === mode
+              return (
+                <button
+                  key={mode}
+                  onClick={() => update({ ipAllocation: mode })}
+                  style={{
+                    flex: 1,
+                    padding: '5px 0',
+                    background: active ? (mode === 'Dynamic' ? '#1e3a5f' : '#1e2b4a') : '#0f1117',
+                    border: `1px solid ${active ? (mode === 'Dynamic' ? '#3b82f6' : '#6366f1') : '#2d3148'}`,
+                    borderRadius: 6,
+                    color: active ? '#e2e8f0' : '#475569',
+                    cursor: 'pointer',
+                    fontSize: 12,
+                    fontWeight: active ? 600 : 400,
+                  }}
+                >
+                  {mode}
+                </button>
+              )
+            })}
+          </div>
+        </Field>
+      )}
+      {data.role === 'domain-controller' && (
+        <Field label="IP Allocation">
+          <div style={{ padding: '5px 9px', background: '#0f1117', border: '1px solid #2d3148', borderRadius: 6, color: '#475569', fontSize: 12 }}>
+            Static <span style={{ color: '#334155', fontSize: 10 }}>(required for DC)</span>
+          </div>
+        </Field>
+      )}
+      <Field label="Private IP Address">
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <input
+            type="text"
+            value={data.privateIp ?? ''}
+            onChange={(e) => update({ privateIp: e.target.value })}
+            placeholder={
+              (data.role !== 'domain-controller' && (data.ipAllocation ?? 'Dynamic') === 'Dynamic')
+                ? 'Auto-assigned (DHCP)'
+                : (suggestedIp ?? '10.0.x.x')
+            }
+            disabled={data.role !== 'domain-controller' && (data.ipAllocation ?? 'Dynamic') === 'Dynamic'}
+            style={{
+              ...inputStyle,
+              flex: 1,
+              opacity: (data.role !== 'domain-controller' && (data.ipAllocation ?? 'Dynamic') === 'Dynamic') ? 0.4 : 1,
+              cursor: (data.role !== 'domain-controller' && (data.ipAllocation ?? 'Dynamic') === 'Dynamic') ? 'not-allowed' : 'text',
+            }}
+            onFocus={(e) => ((e.target as HTMLInputElement).style.borderColor = '#6366f1')}
+            onBlur={(e) => ((e.target as HTMLInputElement).style.borderColor = '#2d3148')}
+          />
+          {suggestedIp && (data.role === 'domain-controller' || (data.ipAllocation ?? 'Dynamic') === 'Static') && (
+            <button
+              onClick={() => update({ privateIp: suggestedIp })}
+              title={`Use suggested: ${suggestedIp}`}
+              style={{
+                flexShrink: 0,
+                padding: '5px 8px',
+                background: '#1e2130',
+                border: '1px solid #4f46e5',
+                borderRadius: 6,
+                color: '#818cf8',
+                cursor: 'pointer',
+                fontSize: 11,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              ← {suggestedIp}
+            </button>
+          )}
+        </div>
+        {suggestedIp && (data.role === 'domain-controller' || (data.ipAllocation ?? 'Dynamic') === 'Static') && (
+          <div style={{ color: '#475569', fontSize: 10, marginTop: 4 }}>
+            Suggested from connected subnet
+          </div>
+        )}
       </Field>
 
       <SectionHeading title="Hardware" />
@@ -169,7 +315,6 @@ function VMForm({ data, update }: { data: VMNodeData; update: (p: Partial<VMNode
         <TextInput value={data.adminPassword} onChange={(v) => update({ adminPassword: v })} type="password" placeholder="••••••••" />
       </Field>
 
-      {/* Role-specific fields */}
       {data.role === 'domain-controller' && (
         <>
           <SectionHeading title="Active Directory" />
@@ -271,7 +416,7 @@ function NSGForm({ data, update }: { data: NSGNodeData; update: (p: Partial<NSGN
 // ── Main panel ────────────────────────────────────────────────────────────────
 
 export function PropertiesPanel() {
-  const { selectedNodeId, nodes, updateNodeData, setSelectedNodeId } = useLabStore()
+  const { selectedNodeId, nodes, edges, updateNodeData, setSelectedNodeId } = useLabStore()
 
   if (!selectedNodeId) {
     return (
@@ -321,7 +466,6 @@ export function PropertiesPanel() {
         overflow: 'hidden',
       }}
     >
-      {/* Panel header */}
       <div
         style={{
           padding: '12px 14px',
@@ -354,12 +498,12 @@ export function PropertiesPanel() {
         </button>
       </div>
 
-      {/* Form body */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px' }}>
         {node.type === 'vm' && (
           <VMForm
             data={node.data as VMNodeData}
             update={(p) => update(p as Record<string, unknown>)}
+            suggestedIp={getSuggestedIp(selectedNodeId, nodes, edges) ?? undefined}
           />
         )}
         {node.type === 'vnet' && (

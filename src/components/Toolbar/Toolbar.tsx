@@ -1,7 +1,88 @@
 import { useRef, useState } from 'react'
-import { Cpu, Download, Trash2, Copy, Check, X, Terminal, ExternalLink, Save, Upload } from 'lucide-react'
+import { Cpu, Download, Trash2, Copy, Check, X, Terminal, ExternalLink, Save, Upload, ShieldCheck } from 'lucide-react'
 import useLabStore from '../../store/useLabStore'
 import { generateBicep } from '../../engine/bicepGenerator'
+import { validateNetwork, ValidationResult } from '../../engine/networkValidator'
+
+function NetworkValidationModal({ result, onClose }: { result: ValidationResult; onClose: () => void }) {
+  const allOk = result.errorCount === 0 && result.warningCount === 0
+
+  const severityStyle = (s: string): React.CSSProperties => {
+    if (s === 'error')   return { color: '#f87171', background: '#1f0f0f', border: '1px solid #7f1d1d' }
+    if (s === 'warning') return { color: '#fbbf24', background: '#1a1506', border: '1px solid #78350f' }
+    return               { color: '#4ade80', background: '#0a1a0f', border: '1px solid #14532d' }
+  }
+
+  const icon = (s: string) => s === 'error' ? '✕' : s === 'warning' ? '⚠' : '✓'
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      onClick={onClose}
+    >
+      <div
+        style={{ background: '#12151e', border: '1px solid #2d3148', borderRadius: 12, width: 600, maxWidth: '92vw', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.7)' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid #1e2130', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <ShieldCheck size={16} color={allOk ? '#4ade80' : result.errorCount > 0 ? '#f87171' : '#fbbf24'} />
+          <span style={{ fontSize: 14, color: '#e2e8f0', fontWeight: 600, flex: 1 }}>
+            Network Validation
+          </span>
+          <div style={{ display: 'flex', gap: 8, fontSize: 12 }}>
+            {result.errorCount > 0 && (
+              <span style={{ color: '#f87171', background: '#1f0f0f', border: '1px solid #7f1d1d', padding: '2px 10px', borderRadius: 20, fontWeight: 600 }}>
+                {result.errorCount} error{result.errorCount !== 1 ? 's' : ''}
+              </span>
+            )}
+            {result.warningCount > 0 && (
+              <span style={{ color: '#fbbf24', background: '#1a1506', border: '1px solid #78350f', padding: '2px 10px', borderRadius: 20, fontWeight: 600 }}>
+                {result.warningCount} warning{result.warningCount !== 1 ? 's' : ''}
+              </span>
+            )}
+            {allOk && (
+              <span style={{ color: '#4ade80', background: '#0a1a0f', border: '1px solid #14532d', padding: '2px 10px', borderRadius: 20, fontWeight: 600 }}>
+                All good
+              </span>
+            )}
+          </div>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#475569', padding: 4, borderRadius: 4, marginLeft: 4 }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Issues list */}
+        <div style={{ overflowY: 'auto', flex: 1, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {result.issues.map((issue, i) => (
+            <div
+              key={i}
+              style={{
+                ...severityStyle(issue.severity),
+                borderRadius: 8,
+                padding: '10px 14px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 10,
+                fontSize: 13,
+              }}
+            >
+              <span style={{ fontWeight: 700, fontSize: 14, lineHeight: '1.2', flexShrink: 0 }}>
+                {icon(issue.severity)}
+              </span>
+              <div>
+                {issue.nodeLabel && (
+                  <span style={{ fontWeight: 600, opacity: 0.85, marginRight: 6 }}>[{issue.nodeLabel}]</span>
+                )}
+                {issue.message}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function BicepModal({ content, onClose }: { content: string; onClose: () => void }) {
   const [copied, setCopied] = useState(false)
@@ -288,7 +369,12 @@ export function Toolbar() {
   const [showBicep, setShowBicep] = useState(false)
   const [bicepContent, setBicepContent] = useState('')
   const [showDeploy, setShowDeploy] = useState(false)
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleValidateNetwork = () => {
+    setValidationResult(validateNetwork(nodes, edges))
+  }
 
   const handleExport = () => {
     const content = generateBicep(nodes, edges)
@@ -410,6 +496,39 @@ export function Toolbar() {
         <div style={{ flex: 1 }} />
 
         {/* Actions */}
+        <button
+          onClick={handleValidateNetwork}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '5px 12px',
+            background: 'transparent',
+            border: '1px solid #2d3148',
+            borderRadius: 7,
+            color: '#64748b',
+            cursor: 'pointer',
+            fontSize: 12,
+            fontWeight: 500,
+          }}
+          onMouseEnter={(e) => {
+            const b = e.currentTarget as HTMLButtonElement
+            b.style.borderColor = '#22c55e'
+            b.style.color = '#4ade80'
+          }}
+          onMouseLeave={(e) => {
+            const b = e.currentTarget as HTMLButtonElement
+            b.style.borderColor = '#2d3148'
+            b.style.color = '#64748b'
+          }}
+          title="Validate network configuration"
+        >
+          <ShieldCheck size={13} />
+          Validate Network
+        </button>
+
+        <div style={{ width: 1, height: 24, background: '#1e2130' }} />
+
         <button
           onClick={handleLoadDiagram}
           style={{
@@ -564,6 +683,9 @@ export function Toolbar() {
       )}
       {showDeploy && (
         <DeployModal bicep={bicepContent} onClose={() => setShowDeploy(false)} />
+      )}
+      {validationResult && (
+        <NetworkValidationModal result={validationResult} onClose={() => setValidationResult(null)} />
       )}
     </>
   )
