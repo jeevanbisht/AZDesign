@@ -1,5 +1,6 @@
 import { Node, Edge } from '@xyflow/react'
 import { VMNodeData, VNetNodeData, SubnetNodeData, NSGNodeData } from '../types/nodes'
+import { validateNetwork, validateDeploymentReadiness, ValidationIssue } from './networkValidator'
 
 function sanitize(name: string): string {
   return name.replace(/[^a-zA-Z0-9]/g, '_')
@@ -72,12 +73,61 @@ export function generateBicep(nodes: Node[], edges: Edge[]): string {
     if (src.type === 'subnet' && tgt.type === 'nsg') nsgToSubnet.set(tgt.id, src.id)
   }
 
+  // Track the ordered list of subnets per VNet to derive the correct ARM array index
+  const vnetSubnetOrder = new Map<string, string[]>()
+  for (const subnet of subnetNodes) {
+    const vnetId = subnetToVnet.get(subnet.id)
+    if (vnetId) {
+      if (!vnetSubnetOrder.has(vnetId)) vnetSubnetOrder.set(vnetId, [])
+      vnetSubnetOrder.get(vnetId)!.push(subnet.id)
+    }
+  }
+
+  // ── Pre-flight validation ─────────────────────────────────────────────────
+  // Run the same checks as the "Validate Network" button plus deployment-readiness
+  // rules (VM naming, forbidden usernames, DC config). Issues are embedded as
+  // comments in the generated file so reviewers see them immediately.
+  const netResult = validateNetwork(nodes, edges)
+  const deployIssues = validateDeploymentReadiness(nodes)
+  const allIssues: ValidationIssue[] = [
+    ...netResult.issues.filter((i) => i.severity !== 'ok'),
+    ...deployIssues,
+  ]
+  const errorCount  = allIssues.filter((i) => i.severity === 'error').length
+  const warnCount   = allIssues.filter((i) => i.severity === 'warning').length
+
+  // Build a per-node issue map so individual resources get inline annotations
+  const nodeIssues = new Map<string, string[]>()
+  for (const issue of allIssues) {
+    if (issue.nodeId) {
+      if (!nodeIssues.has(issue.nodeId)) nodeIssues.set(issue.nodeId, [])
+      nodeIssues.get(issue.nodeId)!.push(`// [${issue.severity.toUpperCase()}] ${issue.message}`)
+    }
+  }
+
+  /** Emit any per-node annotation lines before a resource block. */
+  function resourceAnnotations(nodeId: string): string {
+    const lines = nodeIssues.get(nodeId)
+    return lines ? lines.join('\n') + '\n' : ''
+  }
+
   const parts: string[] = []
 
-  // ── Header ────────────────────────────────────────────────────────────────
+  // ── Header with validation summary ────────────────────────────────────────
+  const validationBlock =
+    allIssues.length === 0
+      ? '// VALIDATION: All network and deployment checks passed \u2713'
+      : [
+          `// VALIDATION: ${errorCount} error(s), ${warnCount} warning(s) \u2014 review before deploying`,
+          ...allIssues.map((i) => `//   [${i.severity.toUpperCase()}] ${i.message}`),
+        ].join('\n')
+
   parts.push(`// ================================================================
-// Lab Designer — Generated Bicep Template
+// AZDesign \u2014 Generated Bicep Template
 // Generated: ${new Date().toISOString()}
+// Repository: https://github.com/jeevanbisht/AZDesign
+//
+${validationBlock}
 // ================================================================
 
 targetScope = 'resourceGroup'
@@ -85,11 +135,14 @@ targetScope = 'resourceGroup'
 @description('Azure region for all resources')
 param location string = resourceGroup().location
 
-@description('Admin username for all VMs')
+@minLength(1)
+@maxLength(20)
+@description('Admin username for all VMs. Forbidden values: admin, administrator, root, guest, user, test.')
 param adminUsername string = 'labadmin'
 
 @secure()
-@description('Admin password for all VMs')
+@minLength(12)
+@description('Admin password. Must satisfy Azure complexity: uppercase + lowercase + digit + special character.')
 param adminPassword string
 `)
 
@@ -165,10 +218,14 @@ ${subnetsSection}  }
       ? vnetNodes.find((v) => v.id === subnetToVnet.get(subnetNode.id))
       : null
 
-    const subnetRef =
-      subnetNode && vnetNode
-        ? `vnet_${sanitize((vnetNode.data as VNetNodeData).vnetName)}.properties.subnets[0].id`
-        : `'<TODO: replace with subnet resource ID>'`
+    // Use the correct subnet index within the VNet's inline subnets array
+    const subnetRef = (() => {
+      if (!subnetNode || !vnetNode) return `'<TODO: subnet not connected \u2014 draw an edge from this VM to a subnet>'`
+      const vnetData = vnetNode.data as VNetNodeData
+      const orderedSubnets = vnetSubnetOrder.get(vnetNode.id) ?? []
+      const idx = orderedSubnets.indexOf(subnetNode.id)
+      return `vnet_${sanitize(vnetData.vnetName)}.properties.subnets[${idx === -1 ? 0 : idx}].id`
+    })()
 
     const img = getOsImageRef(d.osVersion)
     const hasDisk = d.role === 'domain-controller'
@@ -178,15 +235,26 @@ ${subnetsSection}  }
     const nicDnsBlock = isMember && dcStaticIP
       ? `    dnsSettings: {\n      dnsServers: ['${dcStaticIP}']\n    }\n`
       : ''
-    const privateIPMethod = isDC ? 'Static' : 'Dynamic'
-    const privateIPLine = isDC ? `\n          privateIPAddress: '${dcStaticIP}'` : ''
+
+    // Respect the user-configured IP allocation for all VM roles
+    const isStaticAlloc = isDC || d.ipAllocation === 'Static'
+    const privateIPMethod = isStaticAlloc ? 'Static' : 'Dynamic'
+    // Include the static IP only when one is configured — omit for Dynamic NICs
+    const privateIPLine = isStaticAlloc && d.privateIp
+      ? `\n          privateIPAddress: '${d.privateIp}'`
+      : isDC
+        ? `\n          privateIPAddress: '${dcStaticIP}'`
+        : ''
+
     // Member server NIC must wait for AD DS to be ready, not just the DC NIC
     const nicDependsOn = isMember && dcData
       ? `\n  dependsOn: [ext_${sanitize(dcData.vmName)}_WaitForAD]`
       : ''
 
+    const annotations = resourceAnnotations(vm.id)
+
     parts.push(`// ── ${d.label} (${d.role}) ${'─'.repeat(Math.max(0, 42 - d.label.length - d.role.length))}
-resource pip_${sanitize(d.vmName)} 'Microsoft.Network/publicIPAddresses@2023-04-01' = {
+${annotations}resource pip_${sanitize(d.vmName)} 'Microsoft.Network/publicIPAddresses@2023-04-01' = {
   name: 'pip-${d.vmName}'
   location: location
   sku: { name: 'Standard' }

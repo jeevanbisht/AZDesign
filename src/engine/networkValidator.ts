@@ -226,3 +226,84 @@ export function validateNetwork(nodes: Node[], edges: Edge[]): ValidationResult 
     warningCount: issues.filter((i) => i.severity === 'warning').length,
   }
 }
+
+// ── Deployment readiness ──────────────────────────────────────────────────────
+// These checks apply to the Bicep export layer: naming rules, forbidden values,
+// and role-specific configuration requirements enforced by Azure at deploy time.
+
+/** Per Azure documentation: these admin usernames are rejected by the ARM API. */
+const FORBIDDEN_ADMIN_USERNAMES = new Set([
+  'admin', 'administrator', 'root', 'user', 'test', 'guest', 'superuser',
+  'support', 'default', 'azure', 'master', 'sys', 'oracle', 'nec', '123',
+])
+
+/**
+ * Validate Azure VM name rules.
+ * Windows: 1–15 chars, alphanumeric + hyphens, cannot start/end with hyphen.
+ * Linux: 1–64 chars, same character rules.
+ */
+function vmNameIssues(name: string, isWindows: boolean): string[] {
+  const errs: string[] = []
+  if (!name) { errs.push('VM name is empty'); return errs }
+  const max = isWindows ? 15 : 64
+  if (name.length > max) errs.push(`exceeds Azure ${isWindows ? 'Windows' : 'Linux'} limit of ${max} characters`)
+  if (!/^[a-zA-Z0-9]/.test(name)) errs.push('must start with an alphanumeric character')
+  if (name.endsWith('-')) errs.push('must not end with a hyphen')
+  if (/[^a-zA-Z0-9-]/.test(name)) errs.push('contains invalid characters (alphanumeric and hyphens only)')
+  return errs
+}
+
+/**
+ * Deployment-readiness validation — checks that go beyond network topology
+ * into Azure resource naming rules and role-specific configuration requirements.
+ * Run this alongside validateNetwork() before exporting Bicep.
+ */
+export function validateDeploymentReadiness(nodes: Node[]): ValidationIssue[] {
+  const issues: ValidationIssue[] = []
+  const vmNodes = nodes.filter((n) => n.type === 'vm')
+  const label = (n: Node) => (n.data as { label?: string }).label ?? n.id
+
+  const dcNodes = vmNodes.filter((v) => (v.data as VMNodeData).role === 'domain-controller')
+  if (dcNodes.length > 1) {
+    issues.push({
+      severity: 'warning',
+      message: `${dcNodes.length} domain controllers found — this template supports a single DC for AD promotion; additional DCs require a different DSC configuration`,
+    })
+  }
+
+  for (const vm of vmNodes) {
+    const d = vm.data as VMNodeData
+    const isWindows = !d.osVersion?.startsWith('ubuntu')
+    const nodeLabel = label(vm)
+
+    // ── VM name rules ────────────────────────────────────────────────────────
+    for (const msg of vmNameIssues(d.vmName ?? '', isWindows)) {
+      issues.push({ severity: 'error', nodeId: vm.id, nodeLabel, message: `VM "${nodeLabel}" name "${d.vmName}": ${msg}` })
+    }
+
+    // ── Forbidden admin username ─────────────────────────────────────────────
+    if (d.adminUsername && FORBIDDEN_ADMIN_USERNAMES.has(d.adminUsername.toLowerCase())) {
+      issues.push({
+        severity: 'error', nodeId: vm.id, nodeLabel,
+        message: `VM "${nodeLabel}" uses forbidden admin username "${d.adminUsername}" — Azure will reject this at deployment`,
+      })
+    }
+
+    // ── Domain Controller requirements ───────────────────────────────────────
+    if (d.role === 'domain-controller') {
+      if (!d.domainName) {
+        issues.push({ severity: 'error', nodeId: vm.id, nodeLabel, message: `DC "${nodeLabel}" has no domain name configured (e.g. lab.local)` })
+      }
+      if (d.ipAllocation === 'Dynamic') {
+        issues.push({ severity: 'error', nodeId: vm.id, nodeLabel, message: `DC "${nodeLabel}" must use Static IP allocation — DNS depends on a fixed address` })
+      }
+    }
+
+    // ── Member Server requirements ───────────────────────────────────────────
+    if (d.role === 'member-server' && !d.domainToJoin) {
+      issues.push({ severity: 'warning', nodeId: vm.id, nodeLabel, message: `Member server "${nodeLabel}" has no domain to join configured` })
+    }
+  }
+
+  return issues
+}
