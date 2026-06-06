@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* ── React Flow dark theme overrides ── */
+.react-flow {
+  background: #0f1117;
+}
+
+.react-flow__background {
+  background: #0f1117;
+}
+
+.react-flow__controls {
+  background: #1a1d27;
+  border: 1px solid #2d3148;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.react-flow__controls-button {
+  background: #1a1d27;
+  border-bottom: 1px solid #2d3148;
+  fill: #94a3b8;
+}
+
+.react-flow__controls-button:hover {
+  background: #2d3148;
+}
+
+.react-flow__minimap {
+  background: #1a1d27 !important;
+  border: 1px solid #2d3148;
+  border-radius: 8px;
+}
+
+.react-flow__minimap-node {
+  fill: #2d3148;
+}
+
+.react-flow__edge-path,
+.react-flow__connection-path {
+  stroke: #4b5563;
+  stroke-width: 1.5;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #818cf8;
+}
+
+.react-flow__handle {
+  background: #4b5563;
+  border: 2px solid #1a1d27;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transition: background 0.15s;
+}
+
+.react-flow__handle:hover,
+.react-flow__handle.connecting {
+  background: #6366f1;
+  border-color: #818cf8;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #1a1d27;
+}
+::-webkit-scrollbar-thumb {
+  background: #2d3148;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3d4168;
+}
