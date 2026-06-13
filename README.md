@@ -25,16 +25,18 @@ Whether you're building a quick proof-of-concept lab, teaching Azure networking,
 
 ## Features
 
-- 🎨 **Visual canvas** — drag-and-drop Azure components powered by React Flow
-- 🏗️ **Azure resource support** — Virtual Networks, Subnets, NSGs, and four VM roles
-- 🔧 **Properties panel** — per-resource configuration with live editing
-- 🌐 **Intelligent IP management** — subnet-aware address suggestions, duplicate detection, DHCP vs Static toggle
-- ✅ **Two-pass validation** — network topology checks + deployment readiness checks (VM naming rules, forbidden usernames, DC config)
-- 📄 **Bicep export** — generates parameterised, deployment-ready `.bicep` files with embedded validation annotations
-- 🔒 **AD DS domain join** — correct DSC → WaitForAD → DomainJoin dependency chain; eliminates the race condition where member servers join before the DC is ready
-- 💾 **Save / Load diagrams** — portable JSON for sharing and version control
-- 🚀 **Deploy wizard** — generates Azure CLI commands for one-click deployment
-- 📦 **Zero backend** — fully static, deployable to GitHub Pages / Azure Static Web Apps / Vercel
+| Area | Capability | Description |
+| --- | --- | --- |
+| **Design** | Visual canvas | Drag-and-drop Azure components on an interactive canvas powered by React Flow. |
+| **Design** | Properties panel | Configure every resource through a dedicated panel with live, in-place editing. |
+| **Networking** | Intelligent IP management | Subnet-aware address suggestions, duplicate detection, and DHCP vs. Static toggling. |
+| **Resources** | Azure resource support | Virtual Networks, Subnets, Network Security Groups, and four VM roles. |
+| **Quality** | Two-pass validation | Network-topology checks plus deployment-readiness checks (VM naming rules, forbidden usernames, DC configuration). |
+| **Quality** | AD DS domain join | Generates the correct `DSC → WaitForAD → DomainJoin` dependency chain, eliminating the race condition where member servers join before the domain controller is ready. |
+| **Export** | Bicep generation | Produces parameterised, deployment-ready `.bicep` files with embedded validation annotations. |
+| **Export** | Deploy wizard | Generates ready-to-run Azure CLI commands for one-click deployment. |
+| **Portability** | Save / load diagrams | Stores designs as portable JSON for easy sharing and version control. |
+| **Portability** | Zero backend | Fully static — deployable to GitHub Pages, Azure Static Web Apps, or Vercel. |
 
 ---
 
