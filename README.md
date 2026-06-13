@@ -7,6 +7,8 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript)](https://www.typescriptlang.org)
 [![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite)](https://vitejs.dev)
 
+**🚀 [Try the live demo → az-design-nine.vercel.app](https://az-design-nine.vercel.app/)** — no install, runs entirely in your browser.
+
 ![AZDesign screenshot](docs/screenshot.png)
 
 ---
