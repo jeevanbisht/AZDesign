@@ -1,6 +1,6 @@
-# AZDesign — Azure Lab Designer
+# AZDesign — Azure Visual Designer & Easy Lab Designer
 
-> Visual drag-and-drop tool for designing Azure lab environments and generating production-ready Bicep templates — entirely in the browser, no backend required.
+> **Azure Visual Designer and easy Lab Designer** — a drag-and-drop tool to design Azure lab environments and generate production-ready Bicep templates entirely in the browser, no backend required.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev)
@@ -13,7 +13,9 @@
 
 ## What is AZDesign?
 
-AZDesign lets you compose Azure infrastructure topologies using a drag-and-drop canvas, configure each resource through a properties panel, validate network configurations, and export Azure Bicep templates — all without writing a single line of code.
+**AZDesign** is a free, browser-based **Azure Visual Designer** and **easy Lab Designer** that lets you compose Azure infrastructure topologies on a drag-and-drop canvas, configure each resource through a properties panel, validate network configurations, and export Azure Bicep templates — all without writing a single line of code.
+
+Whether you're building a quick proof-of-concept lab, teaching Azure networking, or scaffolding production infrastructure, this **visual Azure lab designer** turns a diagram into deployment-ready Bicep in seconds.
 
 **Everything runs in the browser.** Diagrams save to portable JSON files. There is no server, no database, and no login required.
 
