@@ -1,29 +1,71 @@
-# AZDesign — Azure Visual Designer & Easy Lab Designer
+<div align="center">
 
-> **Azure Visual Designer and easy Lab Designer** — a drag-and-drop tool to design Azure lab environments and generate production-ready Bicep templates entirely in the browser, no backend required.
+# AZDesign
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript)](https://www.typescriptlang.org)
-[![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite)](https://vitejs.dev)
+### Azure Visual Designer & Easy Lab Designer
 
-**🚀 [Try the live demo → az-design-nine.vercel.app](https://az-design-nine.vercel.app/)** — no install, runs entirely in your browser.
+Design Azure network topologies on a drag-and-drop canvas and export **production-ready Bicep** —
+entirely in your browser, with no backend, no login, and no install.
+
+[![Live Demo](https://img.shields.io/badge/▶_Live_Demo-az--design--nine.vercel.app-000000?logo=vercel&logoColor=white)](https://az-design-nine.vercel.app/)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Vite](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+**[🚀 Try it now](https://az-design-nine.vercel.app/)** · [Features](#-features) · [Quick Start](#-quick-start) · [How to Use](#-how-to-use) · [Bicep Output](#-generated-bicep-example) · [Architecture](#-project-structure)
 
 ![AZDesign screenshot](docs/screenshot.png)
+
+</div>
 
 ---
 
 ## What is AZDesign?
 
-**AZDesign** is a free, browser-based **Azure Visual Designer** and **easy Lab Designer** that lets you compose Azure infrastructure topologies on a drag-and-drop canvas, configure each resource through a properties panel, validate network configurations, and export Azure Bicep templates — all without writing a single line of code.
+**AZDesign** is a free, browser-based **Azure Visual Designer** and **easy Lab Designer**. Compose
+Azure infrastructure topologies on an interactive canvas, configure each resource through a
+properties panel, validate your network, and export **deployment-ready Azure Bicep** — without
+writing a single line of code.
 
-Whether you're building a quick proof-of-concept lab, teaching Azure networking, or scaffolding production infrastructure, this **visual Azure lab designer** turns a diagram into deployment-ready Bicep in seconds.
+Whether you're standing up a quick proof-of-concept lab, teaching Azure networking, or scaffolding
+production infrastructure, AZDesign turns a diagram into deployable Bicep in seconds.
 
-**Everything runs in the browser.** Diagrams save to portable JSON files. There is no server, no database, and no login required.
+> **Everything runs in your browser.** Diagrams save to portable JSON files. There is no server, no
+> database, and no login — your design never leaves your machine unless you choose to share it.
 
 ---
 
-## Features
+## Table of Contents
+
+- [Who it's for](#who-its-for)
+- [✨ Features](#-features)
+- [🚀 Quick Start](#-quick-start)
+- [🧩 Supported Azure Components](#-supported-azure-components)
+- [📖 How to Use](#-how-to-use)
+- [📄 Generated Bicep Example](#-generated-bicep-example)
+- [🗂 Project Structure](#-project-structure)
+- [🛠 Technology Stack](#-technology-stack)
+- [☁️ Deploying as a Static Site](#️-deploying-as-a-static-site)
+- [🔒 Privacy](#-privacy)
+- [🤝 Contributing](#-contributing)
+- [📚 Documentation](#-documentation)
+- [📄 License](#-license)
+
+---
+
+## Who it's for
+
+| You are… | Use AZDesign to… |
+|---|---|
+| **A cloud / infra engineer** | Scaffold a VNet/Subnet/NSG/VM topology and export clean Bicep to deploy. |
+| **An Azure learner or trainer** | Teach and visualize Azure networking without touching the portal. |
+| **A solutions architect** | Sketch a lab or PoC topology and hand off deployment-ready templates. |
+| **Anyone building a lab** | Go from a whiteboard idea to `az deployment group create` in minutes. |
+
+---
+
+## ✨ Features
 
 | Area | Capability | Description |
 | --- | --- | --- |
@@ -40,7 +82,11 @@ Whether you're building a quick proof-of-concept lab, teaching Azure networking,
 
 ---
 
-## Quick Start
+## 🚀 Quick Start
+
+**No install needed** — just open the [live demo](https://az-design-nine.vercel.app/).
+
+To run locally:
 
 ```bash
 # Clone the repository
@@ -61,12 +107,12 @@ Open **http://localhost:5173** in your browser.
 | Command | Description |
 |---|---|
 | `npm run dev` | Start dev server with hot module replacement |
-| `npm run build` | Type-check and produce optimised production build in `dist/` |
+| `npm run build` | Type-check and produce an optimised production build in `dist/` |
 | `npm run preview` | Serve the production build locally |
 
 ---
 
-## Supported Azure Components
+## 🧩 Supported Azure Components
 
 | Component | Category | Description |
 |---|---|---|
@@ -80,16 +126,18 @@ Open **http://localhost:5173** in your browser.
 
 ---
 
-## How to Use
+## 📖 How to Use
 
 ### 1. Build your topology
-Drag components from the left palette onto the canvas. Connect them by dragging from a node handle to its target:
+Drag components from the left palette onto the canvas. Connect them by dragging from a node handle
+to its target:
 - **VM → Subnet**
 - **Subnet → VNet**
 - **NSG → Subnet**
 
 ### 2. Configure resources
-Click any node to open its Properties Panel and set names, IP addresses, OS versions, domain settings, etc.
+Click any node to open its Properties Panel and set names, IP addresses, OS versions, domain
+settings, etc.
 
 ### 3. Validate
 Click **Validate Network** to run the built-in two-pass validator:
@@ -120,11 +168,11 @@ az deployment group create \
 - **Save Diagram** downloads `lab-design.json` — a portable snapshot of your canvas
 - **Load Diagram** restores any previously saved `.json` file
 
-> Tip: commit `lab-design.json` alongside your Bicep templates to version-track your lab topology.
+> 💡 Tip: commit `lab-design.json` alongside your Bicep templates to version-track your lab topology.
 
 ---
 
-## Generated Bicep Example
+## 📄 Generated Bicep Example
 
 ```bicep
 // ================================================================
@@ -164,7 +212,7 @@ resource ext_DC01_WaitForAD '...' = {
 
 ---
 
-## Project Structure
+## 🗂 Project Structure
 
 ```
 src/
@@ -186,7 +234,7 @@ src/
 
 ---
 
-## Technology Stack
+## 🛠 Technology Stack
 
 | Package | Purpose |
 |---|---|
@@ -200,7 +248,7 @@ src/
 
 ---
 
-## Deploying as a Static Site
+## ☁️ Deploying as a Static Site
 
 ```bash
 npm run build
@@ -215,9 +263,23 @@ npx vercel --prod
 # GitHub Pages — add a workflow in .github/workflows/deploy.yml
 ```
 
+> The included [`vercel.json`](vercel.json) rewrites all routes to `index.html` for SPA routing.
+
 ---
 
-## Contributing
+## 🔒 Privacy
+
+AZDesign is a **fully client-side** application:
+
+- **No backend, no database, no login.** Nothing is sent to a server.
+- **Your designs stay local.** Diagrams are saved as JSON files on your machine; you decide if and
+  when to share them.
+- **Static & inspectable.** The entire app is open source and builds to plain static assets you can
+  host anywhere, including air-gapped environments.
+
+---
+
+## 🤝 Contributing
 
 Contributions, issues, and feature requests are welcome!
 
@@ -229,15 +291,17 @@ Contributions, issues, and feature requests are welcome!
 
 ### Extension points
 
-- **New node type** — add interface in `types/nodes.ts`, renderer in `components/nodes/`, form in `PropertiesPanel.tsx`, and handler in `bicepGenerator.ts`
+- **New node type** — add an interface in `types/nodes.ts`, a renderer in `components/nodes/`, a form in `PropertiesPanel.tsx`, and a handler in `bicepGenerator.ts`
 - **New validation check** — add to `validateDeploymentReadiness()` in `networkValidator.ts`; it automatically appears in both the UI modal and the exported Bicep header
-- **New VM role** — add to `VMRole` union, `createDefaultVMData()`, `VMNode.tsx` role config, and the generator
+- **New VM role** — add to the `VMRole` union, `createDefaultVMData()`, `VMNode.tsx` role config, and the generator
 
 ---
 
-## Documentation
+## 📚 Documentation
 
-Full professional documentation is available in [`AZDesign-Documentation.docx`](AZDesign-Documentation.docx) at the repository root, covering:
+Full professional documentation is available in
+[`AZDesign-Documentation.docx`](AZDesign-Documentation.docx) at the repository root, covering:
+
 - Complete user guide with step-by-step instructions
 - Architecture and data flow diagrams
 - Developer guide for extending the application
@@ -245,6 +309,6 @@ Full professional documentation is available in [`AZDesign-Documentation.docx`](
 
 ---
 
-## License
+## 📄 License
 
 [MIT](LICENSE) — free to use, fork, and modify.
