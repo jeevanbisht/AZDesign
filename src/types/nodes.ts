@@ -1,6 +1,7 @@
-export type VMRole = 'domain-controller' | 'member-server' | 'web-server' | 'generic'
+export type VMRole = 'domain-controller' | 'member-server' | 'web-server' | 'client-os' | 'generic'
 export type WebStack = 'iis' | 'nginx' | 'apache'
 export type OSVersion =
+  | 'windows-11'
   | 'windows-server-2022'
   | 'windows-server-2019'
   | 'ubuntu-22-04'
@@ -120,6 +121,13 @@ function createDefaultVMData(role: VMRole, suffix: string): VMNodeData {
         label: `WebServer-${suffix}`,
         vmName: `WebServer${suffix}`,
         webStack: 'iis',
+      }
+    case 'client-os':
+      return {
+        ...base,
+        label: `Client-${suffix}`,
+        vmName: `Client${suffix}`,
+        osVersion: 'windows-11',
       }
     case 'generic':
     default:

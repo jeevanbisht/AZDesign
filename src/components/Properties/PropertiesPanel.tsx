@@ -165,12 +165,25 @@ const VM_SIZE_OPTIONS: { value: VMSize; label: string }[] = [
   { value: 'Standard_D8s_v3', label: 'Standard_D8s_v3 (8 vCPU, 32 GB)' },
 ]
 
-const OS_OPTIONS: { value: OSVersion; label: string }[] = [
+const CLIENT_OS_OPTIONS: { value: OSVersion; label: string }[] = [
+  { value: 'windows-11', label: 'Windows 11' },
+]
+
+const SERVER_OS_OPTIONS: { value: OSVersion; label: string }[] = [
   { value: 'windows-server-2022', label: 'Windows Server 2022' },
   { value: 'windows-server-2019', label: 'Windows Server 2019' },
   { value: 'ubuntu-22-04', label: 'Ubuntu 22.04 LTS' },
   { value: 'ubuntu-20-04', label: 'Ubuntu 20.04 LTS' },
 ]
+
+function osOptionsForRole(role: VMRole): { value: OSVersion; label: string }[] {
+  return role === 'client-os' ? CLIENT_OS_OPTIONS : SERVER_OS_OPTIONS
+}
+
+function osVersionForRole(role: VMRole, current: OSVersion): OSVersion {
+  const options = osOptionsForRole(role)
+  return options.some((option) => option.value === current) ? current : options[0].value
+}
 
 const WEB_STACK_OPTIONS: { value: WebStack; label: string }[] = [
   { value: 'iis', label: 'IIS (Windows)' },
@@ -182,6 +195,7 @@ const ROLE_OPTIONS: { value: VMRole; label: string }[] = [
   { value: 'domain-controller', label: 'Domain Controller' },
   { value: 'member-server', label: 'Member Server' },
   { value: 'web-server', label: 'Web Server' },
+  { value: 'client-os', label: 'Client OS' },
   { value: 'generic', label: 'Generic VM' },
 ]
 
@@ -202,6 +216,9 @@ function VMForm({
   update: (p: Partial<VMNodeData>) => void
   suggestedIp?: string
 }) {
+  const osOptions = osOptionsForRole(data.role)
+  const osVersion = osVersionForRole(data.role, data.osVersion)
+
   return (
     <div>
       <SectionHeading title="Identity" />
@@ -212,7 +229,11 @@ function VMForm({
         <TextInput value={data.vmName} onChange={(v) => update({ vmName: v })} placeholder="e.g. DC01" />
       </Field>
       <Field label="Role">
-        <Select<VMRole> value={data.role} onChange={(v) => update({ role: v })} options={ROLE_OPTIONS} />
+        <Select<VMRole>
+          value={data.role}
+          onChange={(v) => update({ role: v, osVersion: osVersionForRole(v, data.osVersion) })}
+          options={ROLE_OPTIONS}
+        />
       </Field>
 
       <SectionHeading title="Networking" />
@@ -304,7 +325,7 @@ function VMForm({
         <Select<VMSize> value={data.vmSize} onChange={(v) => update({ vmSize: v })} options={VM_SIZE_OPTIONS} />
       </Field>
       <Field label="Operating System">
-        <Select<OSVersion> value={data.osVersion} onChange={(v) => update({ osVersion: v })} options={OS_OPTIONS} />
+        <Select<OSVersion> value={osVersion} onChange={(v) => update({ osVersion: v })} options={osOptions} />
       </Field>
 
       <SectionHeading title="Access" />

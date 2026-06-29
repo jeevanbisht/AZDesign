@@ -1,5 +1,5 @@
 import useLabStore from '../../store/useLabStore'
-import { Network, Layers, ShieldAlert, Shield, Server, Globe, Monitor, LucideIcon } from 'lucide-react'
+import { Network, Layers, ShieldAlert, Shield, Server, Globe, Monitor, Laptop, LucideIcon } from 'lucide-react'
 import { createDefaultNodeData } from '../../types/nodes'
 
 interface PaletteItemDef {
@@ -26,7 +26,8 @@ const SECTIONS: { title: string; items: PaletteItemDef[] }[] = [
       { nodeType: 'vm', role: 'domain-controller', Icon: Shield, label: 'Domain Controller', desc: 'Active Directory + DNS', color: '#60a5fa' },
       { nodeType: 'vm', role: 'member-server', Icon: Server, label: 'Member Server', desc: 'Joins domain, general purpose', color: '#4ade80' },
       { nodeType: 'vm', role: 'web-server', Icon: Globe, label: 'Web Server', desc: 'IIS / Nginx / Apache', color: '#fb923c' },
-      { nodeType: 'vm', role: 'generic', Icon: Monitor, label: 'Generic VM', desc: 'Bare Windows or Linux VM', color: '#94a3b8' },
+      { nodeType: 'vm', role: 'client-os', Icon: Laptop, label: 'Client OS', desc: 'Windows 11 workstation', color: '#38bdf8' },
+      { nodeType: 'vm', role: 'generic', Icon: Monitor, label: 'Generic VM', desc: 'Bare server or Linux VM', color: '#94a3b8' },
     ],
   },
 ]

@@ -72,7 +72,7 @@ production infrastructure, AZDesign turns a diagram into deployable Bicep in sec
 | **Design** | Visual canvas | Drag-and-drop Azure components on an interactive canvas powered by React Flow. |
 | **Design** | Properties panel | Configure every resource through a dedicated panel with live, in-place editing. |
 | **Networking** | Intelligent IP management | Subnet-aware address suggestions, duplicate detection, and DHCP vs. Static toggling. |
-| **Resources** | Azure resource support | Virtual Networks, Subnets, Network Security Groups, and four VM roles. |
+| **Resources** | Azure resource support | Virtual Networks, Subnets, Network Security Groups, and five VM roles. |
 | **Quality** | Two-pass validation | Network-topology checks plus deployment-readiness checks (VM naming rules, forbidden usernames, DC configuration). |
 | **Quality** | AD DS domain join | Generates the correct `DSC → WaitForAD → DomainJoin` dependency chain, eliminating the race condition where member servers join before the domain controller is ready. |
 | **Export** | Bicep generation | Produces parameterised, deployment-ready `.bicep` files with embedded validation annotations. |
@@ -122,7 +122,8 @@ Open **http://localhost:5173** in your browser.
 | Domain Controller | Virtual Machine | Windows Server with AD DS and DNS; always Static IP |
 | Member Server | Virtual Machine | Joins a domain; general-purpose Windows or Linux workload |
 | Web Server | Virtual Machine | Runs IIS, Nginx, or Apache; configurable web stack |
-| Generic VM | Virtual Machine | Bare Windows or Linux VM with no role-specific configuration |
+| Client OS | Virtual Machine | Windows 11 workstation/client VM |
+| Generic VM | Virtual Machine | Bare Windows Server or Linux VM with no role-specific configuration |
 
 ---
 

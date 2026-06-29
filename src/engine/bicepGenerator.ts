@@ -16,6 +16,12 @@ function getSubnetFirstHostIP(addressPrefix: string): string {
 
 function getOsImageRef(osVersion: string) {
   switch (osVersion) {
+    case 'windows-11':
+      return {
+        publisher: 'MicrosoftWindowsDesktop',
+        offer: 'windows-11',
+        sku: 'win11-25h2-pro',
+      }
     case 'windows-server-2022':
       return {
         publisher: 'MicrosoftWindowsServer',
@@ -229,6 +235,9 @@ ${subnetsSection}  }
 
     const img = getOsImageRef(d.osVersion)
     const hasDisk = d.role === 'domain-controller'
+    const licenseType = d.osVersion === 'windows-11'
+      ? `\n    licenseType: 'Windows_Client'`
+      : ''
 
     const isDC = d.role === 'domain-controller'
     const isMember = d.role === 'member-server'
@@ -281,7 +290,7 @@ ${nicDnsBlock}    ipConfigurations: [
 resource vm_${sanitize(d.vmName)} 'Microsoft.Compute/virtualMachines@2023-03-01' = {
   name: '${d.vmName}'
   location: location
-  properties: {
+  properties: {${licenseType}
     hardwareProfile: { vmSize: '${d.vmSize}' }
     osProfile: {
       computerName: '${d.vmName}'

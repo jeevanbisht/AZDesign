@@ -289,6 +289,14 @@ export function validateDeploymentReadiness(nodes: Node[]): ValidationIssue[] {
       })
     }
 
+    // ── Client OS requirements ────────────────────────────────────────────────
+    if (d.role === 'client-os' && d.osVersion !== 'windows-11') {
+      issues.push({ severity: 'error', nodeId: vm.id, nodeLabel, message: `Client OS "${nodeLabel}" must use Windows 11` })
+    }
+    if (d.role !== 'client-os' && d.osVersion === 'windows-11') {
+      issues.push({ severity: 'error', nodeId: vm.id, nodeLabel, message: `Windows 11 is only available for Client OS VMs` })
+    }
+
     // ── Domain Controller requirements ───────────────────────────────────────
     if (d.role === 'domain-controller') {
       if (!d.domainName) {

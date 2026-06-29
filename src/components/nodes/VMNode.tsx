@@ -1,5 +1,5 @@
 import { Handle, NodeProps, Position, Node, useReactFlow } from '@xyflow/react'
-import { Shield, Server, Globe, Monitor, type LucideIcon } from 'lucide-react'
+import { Shield, Server, Globe, Monitor, Laptop, type LucideIcon } from 'lucide-react'
 import { VMNodeData, VMRole } from '../../types/nodes'
 
 type VMNodeType = Node<VMNodeData, 'vm'>
@@ -28,6 +28,13 @@ const ROLE_CONFIG: Record<
     selectedBorder: '#fdba74',
     Icon: Globe,
     label: 'Web Server',
+  },
+  'client-os': {
+    headerBg: '#0369a1',
+    border: '#38bdf8',
+    selectedBorder: '#bae6fd',
+    Icon: Laptop,
+    label: 'Client OS',
   },
   generic: {
     headerBg: '#374151',
